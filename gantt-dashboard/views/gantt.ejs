@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+    <style>
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: sans-serif;
+    }
+
+    main {
+        max-width: 1000px;
+        margin: auto;
+        padding-top: 20px;
+    }
+
+    .project_container {
+        display: flex;
+        gap: 25px;
+        flex-wrap: wrap;
+    }
+
+    .project_card {
+        flex: 1 0 calc(25% - 25px);
+        max-width: calc(25% - 25px);
+
+        min-height: 169px;
+        border: 1px solid black;
+        padding: 10px;
+        cursor: pointer;
+        transition: translate 0.2s;
+
+        filter: grayscale(50%);
+        button {
+            height: auto;
+            margin-top: 20px;
+            padding: 3px 0;
+        }
+    }
+
+    #project_create_card {
+        flex: 1 0 calc(25% - 25px) ;
+        max-width: calc(25% - 25px);
+        min-height: 169px;
+        cursor: pointer;
+        transition: translate 0.2s;
+    }
+
+    .project_card:hover, #project_create_card:hover {
+        translate: 0px -5px;
+        filter: grayscale(0%);
+
+    }
+
+    main button {
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    h2 {
+        margin-bottom: 20px;
+    }
+
+    .container {
+        margin-bottom: 50px;
+        
+    }
+
+    .close {
+        display: none;
+    }
+
+    .modal {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        left: 0; top: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+
+        .modal_container {
+            width: fit-content;
+            background-color: white;
+            margin: 20px auto 0 auto;
+            padding: 20px;
+        }
+
+        button.modal_close {
+            display: block;
+            margin-left: auto;
+            padding: 5px;
+        }
+
+        .modal_header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    }
+
+    input {
+            padding: 5px;
+            width: 100%;
+            cursor: pointer; 
+        }
+
+        .control_form {
+            padding-bottom: 100px;
+            .control_group {
+                margin-bottom: 10px;
+            }
+            .form_header {
+                font-size: 2rem;
+                font-weight: bolder;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            .control_submit {
+                margin-top: 50px;
+            }
+        }
+
+        input[type="color"] {
+            padding: 0; 
+        }
+        
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+        }
+        
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+    
+
+    </style>
+</head>
+<body>
+    <%- include('partials/_sidebar') %>
+    <main>
+        <a href="/">Home</a>
+        <div class="container">
+            <h2>Ongoing Project</h2>
+            <div class="project_container">
+            </div>
+        </div>
+    </main>
+
+    <div class="modal close">
+        <div class="modal_container">
+            <button onclick="toggle_modal()" class="modal_close">X</button>
+            <div class="modal_header">
+            </div>
+            <div class="modal_body">
+                <form method="POST" action="/data/projects" class="control_form">
+                    <div class="form_header">
+                        Create a new Task
+                    </div>
+
+                    <div class="control_group">
+                        <label for="project_name">Project Name: </label>
+                        <input type="text" id="project_name" name="name">
+                    </div>
+
+                    <div class="control_group">
+                        <label for="project_description">Project Description: </label>
+                        <input type="text" id="project_description" name="description">
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_color">Project Color: </label>
+                        <input type="color" id="project_color" name="color">
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_start">Project Start: </label>
+                        <input type="datetime-local" id="project_start" name="start"> 
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_end">Project End: </label>
+                        <input type="datetime-local" id="project_end" name="end">
+                    </div>
+
+                    <div class="control_submit">
+                        <input type="submit" value="Create new Project">
+                    </div>
+                    <input type="hidden" name="dependencies" value="''">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gantt;
+        
+        window.addEventListener("pageshow", () => {
+            
+            document.querySelector("#project_start").value = new Date().toISOString().slice(0, 16);
+            document.querySelector("#project_end").value = new Date().toISOString().slice(0, 16);
+            list_projects();
+        })
+
+        async function list_projects () {
+            const response = await fetch("/data/projects");
+            let projects;
+            if(response.ok) {
+                projects = await response.json();
+            } else {
+                return alert("Error fetching data");
+            }
+
+            const create_button = `
+                <div id="project_create_card">
+                    <button onclick="toggle_modal()">Create New Project</button>
+                </div>
+                `
+
+            let html = projects.map((project) => {
+                return `
+                <div onclick="window.location.href='/gantt/projects/${project.id}'" class="project_card" style="background-color:${project.color}">
+                    <small>open project</small>
+
+                    <h2>${project.name}</h2>
+                    <p>${project.start}</p>
+                    <p>${project.end}</p>
+                </div>`});
+
+            document.querySelector(".project_container").innerHTML = "";
+            document.querySelector(".project_container").innerHTML += create_button;
+            document.querySelector(".project_container").innerHTML += (html.join(''));
+        }
+
+
+        function toggle_modal() {
+            document.querySelector(".modal").classList.toggle("close");
+        }
+
+        function todayISO() {
+
+        }
+
+    </script>
+</body>
+</html>

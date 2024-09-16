@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        iframe {
+            width: 600px;
+            height: 300px;
+            border: 1px solid black;
+            margin: auto;
+            display: block;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="http://localhost:5030/gantt-basic?employee_id=EMPLOYEE_3&token=sample_token" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</body>
+<!-- <script>
+    fetch('', {
+        method: 'GET',
+        headers: headers
+    })
+    .then(response => response.text()) // Expecting HTML page as response
+    .then(html => {
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+
+        let iframe = document.getElementById('frame');
+        iframe.src = url;
+    })
+    .catch(error => console.error('Error:', error));
+    
+</script> -->
+</html>

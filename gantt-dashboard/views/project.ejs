@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: auto;
+            padding-top: 20px;
+        }
+
+        .close {
+            display: none;
+        }
+
+        .modal {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        left: 0; top: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+
+        .modal_container {
+            width: fit-content;
+            background-color: white;
+            margin: 20px auto 0 auto;
+            padding: 20px 50px;
+        }
+
+        button.modal_close {
+            display: block;
+            margin-left: auto;
+            padding: 5px;
+        }
+
+        .modal_header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    }
+
+        .gantt_chart {
+            margin-bottom: 40px;
+            button {
+                padding: 3px 5px;
+            }
+
+            .gantt_heading {
+                text-align: center;
+                font-size: 1.7rem;
+                margin-bottom: 20px;
+            }
+
+            .gantt_controls {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .gantt_controls {
+                display: flex;
+                gap: 5px;
+            }
+
+        }
+
+
+        input {
+            padding: 5px;
+            width: 100%;
+            cursor: pointer; 
+        }
+
+        .control_form {
+            .control_group {
+                margin-bottom: 10px;
+            }
+            .form_header {
+                font-size: 2rem;
+                font-weight: bolder;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+
+
+        input[type="color"] {
+            padding: 0; 
+        }
+        
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+        }
+        
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+    </style>
+</head>
+<body>
+    <%- include('partials/_sidebar') %>
+        <main>
+            <a href="/">Home</a>
+            <div id="project_edit_form" class="container">
+                <form class="control_form">
+                    <div class="form_header"><%= project.name %></div>
+
+                    <div class="control_group">
+                        <label for="project_name">Project Name: </label>
+                        <input type="text" id="project_name" name="name" value="<%= project.name %>">
+                    </div>
+
+                    <div class="control_group">
+                        <label for="project_description">Project Description: </label>
+                        <input type="text" id="project_description" name="description" value="<%= project.description %>">
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_color">Project Color: </label>
+                        <input type="color" id="project_color" name="color" value="<%= project.color %>">
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_start">Project Start: </label>
+                        <input type="datetime-local" id="project_start" name="start" value="<%= project.start %>"> 
+                    </div>
+                    
+                    <div class="control_group">
+                        <label for="project_end">Project End: </label>
+                        <input type="datetime-local" id="project_end" name="end" value="<%= project.end %>">
+                    </div>
+                </form>
+            </div>
+
+            <div class="container">
+                <div class="gantt_chart">
+                    <div class="gantt_heading">
+                        <h4>Tasks</h4>
+                    </div>
+                    <div class="gantt_controls">
+                        <div class="gantt_controls">
+                            <button onclick="change_view('Hour')">Hour</button>
+                            <button onclick="change_view('Quarter Day')">Quater Day</button>
+                            <button onclick="change_view('Half Day')">Half Day</button>
+                            <button onclick="change_view('Day')">Day</button>
+                            <button onclick="change_view('Week')">Week</button>
+                            <button onclick="change_view('Month')">Month</button>
+                            <button onclick="change_view('Year')">Year</button>
+                        </div>
+
+                        <div class="gantt_create">
+                            <button onclick="toggle_modal('#create_modal')">Create New Task</button>
+                        </div>
+                    </div>
+                    <div class="gantt_content">
+                        <div id="gantt"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="create_modal" class="modal close">
+            <div class="modal_container">
+                <button onclick="toggle_modal('#create_modal')" class="modal_close">X</button>
+                <div class="modal_body">
+                    <form id="create_form" method="POST" action="/data/tasks" class="control_form">
+                        <div class="form_header">Create new task</div>
+                        <input type="hidden" name="project_id" value="<%= project.id%>">
+
+                        <div class="control_group">
+                            <label for="task_name">Task Name: </label>
+                            <input type="text" id="task_name" name="name">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="task_description">Task Description: </label>
+                            <input type="text" id="task_description" name="description">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="task_color">Task Color: </label>
+                            <input type="color" id="task_color" name="color">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="task_start">Task Start: </label>
+                            <input type="datetime-local" id="task_start" name="start">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="task_end">Task End: </label>
+                            <input type="datetime-local" id="task_end_time" name="end">
+                        </div>
+
+                        <div class="control_submit">
+                            <input type="submit" value="Add Task">
+                        </div>
+
+                        <input type="hidden" name="dependencies">
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="open_modal" class="modal close">
+            
+            <div class="modal_container">
+                
+                <button onclick="toggle_modal('#open_modal')" class="modal_close">X</button>
+                
+                
+                <div class="modal_body">
+                    <form id="task_edit_form" class="control_form">
+                        <div class="form_header">Edit task</div>
+
+                        <input type="hidden" name="project_id" value="<%= project.id%>">
+                        <input type="hidden" id="open_id" name="id">
+
+                        <div class="control_group">
+                            <label for="open_name">Task Name: </label>
+                            <input type="text" id="open_name" name="name">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="open_description">Task Description: </label>
+                            <input type="text" id="open_description" name="description">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="open_color">Task Color: </label>
+                            <input type="color" id="open_color" name="color">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="open_start">Task Start: </label>
+                            <input type="datetime-local" id="open_start" name="start">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="open_end">Task End: </label>
+                            <input type="datetime-local" id="open_end" name="end">
+                        </div>
+
+                        <div class="control_group">
+                            <label for="open_dependencies">Task dependencies: </label>
+                            <input type="text" id="open_dependencies" name="dependencies">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let gantt;
+            const gantt_custom_popup = (task) => {
+                return `
+                    <div class="title">
+                        <button onclick="open_task('${task.id}')">Open</button><br>
+                    </div>
+                    <div class="subtitle"> This is a title</div>
+            `
+            }
+            const gantt_options = {
+                view_mode: 'Day',
+                date_format: 'YYYY-MM-DD',
+                custom_popup_html: (task) => gantt_custom_popup(task),
+                // on_date_change: (task, start, end) => update_main_task_timelines(task, start, end),
+                bar_height: 30,
+                padding: 18,
+                // header_height: 50,
+                // column_width: 38,
+                // step: 24,
+                // bar_height: 20,
+                // bar_corner_radius: 3,
+                // arrow_curve: 5,
+                // padding: 18,
+                // view_mode: "Day",
+                // date_format: "YYYY-MM-DD",
+                // popup_trigger: "click",
+                // language: "en"
+            }
+
+
+            window.addEventListener("pageshow", () => {
+                start_gantt();
+            })
+
+            //get all tasks at start
+            async function start_gantt () {
+                let project_tasks;
+                const response = await fetch(`/data/projects/<%= project.id%>/tasks`);
+                if(response.ok) {
+                    project_tasks = await response.json();
+                } else {
+                    return alert("Error fetching data");
+                }
+
+                if(!project_tasks.length){
+                    project_tasks = [{start: new Date(),end: new Date()}]
+                    gantt = new Gantt("#gantt", project_tasks, gantt_options);
+                    document.querySelector(".bar").remove();
+                } else {
+                    gantt = new Gantt("#gantt", project_tasks, gantt_options);
+                }
+
+                setup_bar_colors();
+            }
+
+            async function update_gantt() {
+                let updated_tasks;
+                const response = await fetch(`/data/projects/<%= project.id%>/tasks`);
+                if(response.ok) {
+                    updated_tasks = await response.json();
+                } else {
+                    return alert("Error fetching data");
+                }
+                if(!updated_tasks.length){
+                    updated_tasks = [{start: new Date(),end: new Date()}]
+                    gantt.refresh(updated_tasks);
+                    document.querySelector(".bar").remove();
+                } else {
+                    gantt.refresh(updated_tasks);
+                }
+                setup_bar_colors();
+            }
+
+
+            function setup_bar_colors() {
+                const bars = document.querySelectorAll(".bar-wrapper");
+                if(!bars.length) return;
+                bars.forEach((bar) => {
+                    const task = gantt.get_task(bar.dataset.id);
+                    bar.querySelector(".bar").style.fill = task.color;
+                })
+            }
+
+            function toggle_modal(modalID) {
+                document.querySelector(modalID).classList.toggle("close");
+            }
+
+            async function open_task(taskID) {
+                let response = await fetch(`/data/tasks/${taskID}`, { method: "GET" });
+                let task = await response.json();
+
+                document.getElementById("open_id").value = task.id;
+                document.getElementById("open_name").value = task.name || "";
+                document.getElementById("open_description").value = task.description || "";
+                document.getElementById("open_color").value = task.color || "#3498db";
+                document.getElementById("open_dependencies").value = task.dependencies || "";
+                document.getElementById("open_start").value = task.start || new Date();
+                document.getElementById("open_end").value = task.end || new Date();
+
+                toggle_modal("#open_modal");
+            }
+
+            //auto update task edit
+            let debounceUpdateTask
+            document.querySelector("#task_edit_form").addEventListener("input", (e) => {
+                const taskID = document.querySelector("#open_id").value;
+                const name = document.querySelector("#open_name").value;
+                const start = document.querySelector("#open_start").value;
+                const end = document.querySelector("#open_end").value;
+                const color = document.querySelector("#open_color").value;
+                const description = document.querySelector("#open_description").value;
+                
+                const data = {name, start, end, color, description}
+
+                clearTimeout(debounceUpdateTask);
+                debounceUpdateTask = setTimeout (async () => {
+                    let response = await fetch(`/data/tasks/${taskID}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json'},
+                        body: JSON.stringify(data),
+                    })
+
+                    if(response.ok) {
+                        update_gantt();
+                        
+                        showToast("Task updated");
+                    }
+                    else alert("Error on updating the data");
+                }, 1000)
+            })
+
+            //auto update project edit
+            let debounceUpdateProject;
+            document.querySelector("#project_edit_form").addEventListener("input", (e) => {
+                
+                const name = document.querySelector("#project_name").value;
+                const start = document.querySelector("#project_start").value;
+                const end = document.querySelector("#project_end").value;
+                const color = document.querySelector("#project_color").value;
+                const description = document.querySelector("#project_description").value;
+                
+
+                const data = {name, start, end, color, description}
+
+                clearTimeout(debounceUpdateProject);
+                debounceUpdateProject = setTimeout (async () => {
+                    let response = await fetch(`/data/projects/<%= project.id %>`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json'},
+                        body: JSON.stringify(data),
+                    });
+
+                    if(response.ok) {
+                        showToast("Project updated");
+                    }
+                    else alert("Error on updating the data");
+                }, 1000)
+            })
+        
+
+            function showToast(message) {
+                Toastify({
+                    text: message,
+                    duration: 3000, // duration in milliseconds
+                    close: true,    // enable close button
+                    gravity: "top", // `top` or `bottom`
+                    position: "right", // `left`, `center`, or `right`
+                    backgroundColor: "#55555",
+                    stopOnFocus: true // Prevents dismissing when clicking inside
+                }).showToast();
+            }
+
+
+            function change_view(mode) {
+                gantt.change_view_mode(mode)
+                setup_bar_colors();
+            }
+        </script>
+</body>
+
+</html>

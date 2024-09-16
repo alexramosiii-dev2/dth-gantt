@@ -1,0 +1,1032 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gantt Chart</title>
+
+    <!-- Frappe JS and CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/frappe-gantt@0.5.0/dist/frappe-gantt.css">
+    <script src="https://unpkg.com/frappe-gantt@0.5.0/dist/frappe-gantt.min.js"></script>
+
+    <!-- Jquery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+
+        .column_wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+
+        }
+
+        .row_wrapper {
+            display: flex;
+            gap: 20px;
+            & > * {
+                flex: 1;
+            }
+        }
+
+        .collection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+
+        main {
+            margin: auto;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        .control_form {
+            input, button {
+                width: 100%;
+                padding: 10px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+            h3 {margin-bottom: 20px;}
+            .control_group {
+                margin-bottom: 10px;
+            }
+
+            .control_datetime {
+                display: flex;
+                gap: 10px;
+            }
+        }
+
+
+
+        #loaded-title-heading {
+            display: block;
+            margin: auto;
+            background-color: transparent;
+            border: none;
+            font-size: 32px;
+            overflow: visible !important;
+            overflow-clip-margin: 2000px !important;
+        }
+
+        /* Design custom */
+        /* #gantt {
+            .popup-wrapper {
+                width: 200px;
+            }
+
+            .upper-text {
+                font-size: 1.4rem;
+            }
+
+            .lower-text {
+                text-anchor: end;
+            }
+
+            .date {}
+
+            .tick {
+                stroke-width: .3;
+            }
+
+            .tick.thick {
+                stroke-width: 2;
+            }
+
+            .today-highlight {
+                opacity: 1;
+            }
+        } */
+
+        /* Functional */
+        /* #gantt .gantt-container, #gantt-sub .gantt-container{
+            overflow-y: scroll;
+        } */
+
+        /* .parent-bar .bar  {
+            fill: #46e78f
+        } */
+
+        /* when task is selected */
+        /* .gantt .bar-wrapper.active .bar {
+            fill: #71b1f1;
+        } */
+
+
+
+        #task-modal-container {
+            position: fixed;
+            height: 100vh;
+            width: 100vw;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1;
+
+            input, textarea {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            label {
+                margin-bottom: 5px;
+            }
+
+            #task-modal-wrapper {
+                overflow-y: scroll;
+                height: 700px;
+                box-shadow: inset 0 5px 4px -5px rgba(0, 0, 0, 0.3);
+                padding: 20px 10px 0px 10px;
+            }
+            
+
+            #task-modal {
+                width: 850px;
+                display: none;
+                pointer-events: all;
+                padding: 20px;
+                background-color: #eee;
+                margin: auto;
+                margin-top: 50px;
+                box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+
+                #open-task-form-container {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 20px auto;
+                    max-width: 1200px;
+                    gap: 50px;
+
+                    #open-task-form {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 3px;
+                        width: 60%;
+                    }
+                }
+
+
+                #loaded-subtask-title-heading {
+                    display: block;
+                    margin: auto;
+                    background-color: transparent;
+                    border: none;
+                    font-size: 24px;
+                    overflow: visible !important;
+                    overflow-clip-margin: 2000px !important;
+                    margin-bottom: 20px;
+                }
+            }
+        }
+
+        
+
+        .gantt_container {
+            margin-bottom: 50px;
+            h3 {
+                text-align: center;
+                font-size: 32px;
+                margin-bottom: 20px;
+            }
+            .view_controls {
+                display: flex;
+                gap: 3px;
+
+                button {
+                    padding: 3px 5px;
+                }
+            }
+        }
+
+        
+   
+
+
+    </style>
+</head>
+
+<body>
+
+<main>
+
+    <div class="gantt_container">
+        <div class="gantt_header">
+            <h3>Gantt Name</h3>
+            <div class="view_controls">
+                <button onclick="set_chart_view_mode('Minute')" disabled>Minute</button>
+                <button onclick="set_chart_view_mode('Hour')" disabled>Hour</button>
+                <button onclick="set_chart_view_mode('Quarter Day')">Quater Day</button>
+                <button onclick="set_chart_view_mode('Half Day')">Half Day</button>
+                <button onclick="set_chart_view_mode('Day')">Day</button>
+                <button onclick="set_chart_view_mode('Week')">Week</button>
+                <button onclick="set_chart_view_mode('Month')">Month</button>
+                <button onclick="set_chart_view_mode('Year')">Year</button>
+            </div>
+        </div>
+
+        <div class="gantt_chart">
+            <div id="gantt_main"></div>
+        </div>
+    </div>
+    
+
+
+    <!-- MODAL VIEW -->
+    <div id="task-modal-container">
+        <div id="task-modal">
+            <button onclick="close_task()">Close Task</button>
+            <input style="text-align: center;" type="text" id="loaded-subtask-title-heading" value="" disabled
+                placeholder="Subtask view">
+            <div id="task-modal-wrapper">
+                <div id="views-sub-container">
+                    <button onclick="set_subtask_view_mode('Minute')" disabled>Minute</button>
+                    <button onclick="set_subtask_view_mode('Hour')" disabled>Hour</button>
+                    <button onclick="set_subtask_view_mode('Quarter Day')">Quater Day</button>
+                    <button onclick="set_subtask_view_mode('Half Day')">Half Day</button>
+                    <button onclick="set_subtask_view_mode('Day')">Day</button>
+                    <button onclick="set_subtask_view_mode('Week')">Week</button>
+                    <button onclick="set_subtask_view_mode('Month')">Month</button>
+                    <button onclick="set_subtask_view_mode('Year')">Year</button>
+                </div>
+                <div id="open-task-form-container">
+                    <div id="open-task-form">
+                        <label>
+                            NAME: <br>
+                            <input type="text" id="open-name" placeholder="Empty name">
+                        </label>
+                        <label>
+                            Description: <br><textarea type="text" id="open-description" placeholder="No description" style="resize: vertical" rows="4"></textarea>
+                        </label>
+                        <label>
+                            TAGS: <br>
+                            <input type="text" id="open-tags" placeholder="No tag/s">
+                        </label>
+                        <label>
+                            OWNERS: <br>
+                            <input type="text" id="open-owners" placeholder="No owner/s">
+                        </label>
+                        <label>
+                            START: <br>
+                            <input type="date" id="open-start">
+                        </label>
+                        <label>
+                            END: <br>
+                            <input type="date" id="open-end">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="subtask-control">
+                    <button onclick="create_new_subtask()">Create Subtask</button>
+                </div>
+
+                <details style="border: 1px solid black; margin: 10px 0; padding: 10px 5px; cursor: pointer;" open>
+                    <summary>Open/Close Subtasks</summary>
+                    <div id="gantt-sub" style="margin-top: 20px;"></div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="row_wrapper">
+        <div class="column_wrapper">
+            <div id="project_form" class="control_form">
+                
+                <h3>Start a new Project</h3>
+
+                <div class="control_group">
+                    <label for="project_name">Project Name</label>
+                    <input id="project_name" type="text">
+                </div>
+
+                <button onclick="create_new_chart()">New Project</button>
+            </div>
+
+            <div id="column_wrapper">
+                <h3>Recent Projects</h3>
+                <div id="project_list"></div>
+            </div>
+
+        </div>
+
+        <!-- TASKS -->
+        <div class="column_wrapper">
+            <div id="task_form" class="control_form">
+
+                <h3>New Task</h3>
+
+                <div class="control_group">
+                    <label for="task_name">Name: </label>
+                    <input id="task_name" type="text">
+                </div>
+
+                <div class="control_group">
+                    <label>Description</label>
+                    <div id="task_description"></div>
+                </div>
+
+                <div class="control_group">
+                    <label for="task_tags">Tags: </label>
+                    <input  id="task_tags" type="text">
+                </div>
+
+                <div class="control_group">
+                    <label for="task_owners">Owner/s: </label>
+                    <input id="task_owners" type="text">
+                </div>
+
+
+                <div class="control_group">
+                    <label for="task_start">Start: </label>
+                    <div class="control_datetime">
+                        <input id="task_start" type="date" >
+                        <input id="task_start_time" type="time" >
+                    </div>
+                </div>
+
+                <div class="control_group">
+                    <label for="task_end">End: </label>
+                    <div class="control_datetime">
+                        <input id="task_end`" type="date" >
+                        <input id="task_end_time" type="time" >
+                    </div>
+                </div>
+
+                <button onclick="create_new_task()">Add Task</button>
+                <button onclick="create_new_template()">Save As Template</button>
+            </div>
+        </div>
+
+
+        <div class="column_wrapper">
+            <div>
+                <h3>Saved Templates</h3>
+                <div id="template_list" class="collection"></div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+
+
+
+
+
+
+
+    <!-- /////////////////////// SCRIPTS BELOW ////////////////////////////// -->
+
+    <!-- Helpers -->
+    <script defer>
+        function get_hms_now() {
+            fseq.push("get_hms_now");
+
+            const now = new Date();
+            let hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            return `${hours}h_${minutes}m_${seconds}s:${ampm}`;
+        }
+        function formatDateWithoutUTC(date) {
+            fseq.push("formatDateWithoutUTC");
+
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
+        }
+
+        function get_date_formatted(startDate = null, daysToAdd = 0) {
+            fseq.push("get_date_formatted");
+
+            // If no startDate is provided, use today's date
+            const date = startDate ? new Date(startDate) : new Date();
+
+            // Add the specified number of days
+            date.setDate(date.getDate() + daysToAdd);
+
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+            const day = String(date.getDate()).padStart(2, '0');
+
+            return `${year}-${month}-${day}`;
+        }
+
+        function post(endpoint, data = {}) {
+            fseq.push("post");
+
+            url = api_ip + endpoint;
+            return fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data),
+            })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        const { message } = await res.json()
+                        throw new Error(`HTTP error! Server Message: ${message}`);
+                    }
+                    return res.json();
+                });
+        }
+        function get(endpoint) {
+            fseq.push("get");
+            url = api_ip + endpoint;
+            return fetch(url, {
+                method: "GET",
+            })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        const { message } = await res.json();
+                        if (message == "Chart not found.") return false;
+                        throw new Error(`HTTP error! Server Message: ${message}`);
+                    }
+                    return res.json();
+                });
+        }
+    </script>
+
+    <!-- Gantt Initialization -->
+    <script defer>
+        const gantt_custom_popup = (task) => {
+            return `
+                    <div class="title">
+                        <button onclick="open_task('${task.id}')">Open Task</button><br>
+                        <button onclick="duplicate_task('${task.id}')">Duplicate</button><br>
+                        <button onclick="add_dependent('${task.id}')">New Dependent</button><br>
+                        <button onclick="delete_task('${task.id}')">Delete</button><br>
+                    </div>
+                    <div class="subtitle"> This is a title</div>
+            `
+        }
+        const gantt_options = {
+            view_mode: 'Day',
+            date_format: 'YYYY-MM-DD',
+            custom_popup_html: (task) => gantt_custom_popup(task),
+            on_date_change: (task, start, end) => update_main_task_timelines(task, start, end),
+            bar_height: 30,
+            padding: 18,
+            // header_height: 50,
+            // column_width: 38,
+            // step: 24,
+            // bar_height: 20,
+            // bar_corner_radius: 3,
+            // arrow_curve: 5,
+            // padding: 18,
+            // view_mode: "Day",
+            // date_format: "YYYY-MM-DD",
+            // popup_trigger: "click",
+            // language: "en"
+        }
+        function start_main_gantt() {
+            fseq.push("start_main_gantt");
+
+            const temp_task = [{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' }];
+            gantt = new Gantt("#gantt_main", temp_task, gantt_options);
+            document.querySelector(".bar").remove();
+            gantt.tasks = [];
+            $("#views-container").show();
+        }
+        function set_main_gantt_empty() {
+            fseq.push("set_main_gantt_empty");
+
+            const temp_task = [{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' }];
+            gantt.refresh(temp_task); //if empty would remain empty
+            document.querySelector(".bar").remove();
+            gantt.tasks = [];
+        }
+    </script>
+
+    <!-- Main logic -->
+    <script defer>
+        async function create_new_task(dependsToID = "") {
+            fseq.push("create_new_task");
+
+            if (!loaded_chart) return;//chart is not selected
+
+            const name = $("#task-name").val() || get_hms_now();
+            const description = $("#task-description").val() || "";
+
+            const tags = $("#task-tags").val()
+                ?.trim()
+                .split("#")
+                .map(i => i.trim().toLowerCase())
+                .filter(tag => tag.length > 0) || [];
+
+            const owners = $("#task-owners").val()
+                ?.trim()
+                .split(",")
+                .map(i => i.trim().toLowerCase())
+                .filter(tag => tag.length > 0) || [];
+
+            const start = dependsToID ? get_date_formatted(gantt.get_task(dependsToID).end, 1) : $("#task-start").val() || get_date_formatted();
+            const end = dependsToID ? get_date_formatted(gantt.get_task(dependsToID).end, 2) : $("#task-end").val() || get_date_formatted(undefined, 2);
+
+            if(new Date(start) > new Date(end)) {
+                alert("Invalid dates, will not save");
+                return;
+            }
+
+
+            const subtasks = [];
+
+            const dependencies = [];
+            dependsToID && dependencies.push(dependsToID);
+
+            const new_task = {
+                name, description, tags, owners, start, end, loaded_chart, subtasks, dependencies
+            }
+            const tasks = [...gantt.tasks, new_task];
+            gantt.refresh(tasks);// re render with new tasks
+            save_chart(loaded_chart, gantt.tasks);
+        }
+        async function duplicate_task(id) {
+            fseq.push("duplicate_task");
+
+            let task = { ...gantt.get_task(id) };//get initiating task
+            delete task._index; //remove index !important
+            delete task.id; //remove id to generate new one
+            task.name += "-copy"
+            const tasks = [...gantt.tasks, task]; //existing tasks + new task
+            gantt.refresh(tasks);//re render
+            save_chart(loaded_chart, gantt.tasks);
+        }
+        async function update_opened_task() {
+            const name = $("#open-name").val();
+            const description = $("#open-description").val();
+            const tags = $("#open-tags").val()
+                ?.trim()
+                .split("#")
+                .map(i => i.trim().toLowerCase())
+                .filter(tag => tag.length > 0) || [];
+            const owners = $("#open-owners").val()
+                ?.trim()
+                .split(",")
+                .map(i => i.trim().toLowerCase())
+                .filter(tag => tag.length > 0) || [];
+
+
+            const start = $("#open-start").val();
+            const end = $("#open-end").val();
+
+            if(new Date(start) > new Date(end)) {
+                alert("Invalid Date, will not save");
+                return;
+            };
+
+            gantt.get_task(main_task_id).name = name;
+            gantt.get_task(main_task_id).description = description;
+            gantt.get_task(main_task_id).tags = tags;
+            gantt.get_task(main_task_id).owners = owners;
+            gantt.get_task(main_task_id).start = start;
+            gantt.get_task(main_task_id).end = end;
+
+            // const tasks = [...gantt.tasks.map(t => t.id === main_task_id ? updated_task : t)];//new tasks without task
+
+            gantt.refresh(gantt.tasks);
+
+            //makes it so that you only send update request to server 500ms after you styped typing
+            clearTimeout(debounceTimer);//starts the 500ms timer when this is called
+            debounceTimer = setTimeout(() => {
+                save_chart(loaded_chart, gantt.tasks);
+            }, 500)
+        }
+
+        async function delete_task(id) {
+            fseq.push("delete_task");
+
+            if (gantt.tasks.length < 2) {
+                set_main_gantt_empty();
+                // document.querySelector(".bar").remove();//remove last task visually
+                // gantt.tasks = [];//set existing task to empty
+                save_chart(loaded_chart, []);
+            } else {
+                const tasks = gantt.tasks.filter(t => t.id !== id);//new tasks without task
+                gantt.refresh(tasks);//re render
+                save_chart(loaded_chart, gantt.tasks);
+            }
+
+            gantt.hide_popup();//hide popup
+        }
+        function add_dependent(taskID) {
+            fseq.push("add_dependent");
+
+            create_new_task(taskID)
+        }
+
+        async function create_new_chart() {
+            fseq.push("create_new_chart");
+
+            const chart_title = $("#chart-title").val();
+            if (!chart_title) return alert("Missing chart title");
+            start_main_gantt();
+            await save_chart(chart_title, [], true);
+            await load_chart(chart_title);
+
+            $("#chart-title").val("");
+        }
+        async function refresh_chart_list() {
+            fseq.push("refresh_chart_list");
+
+            let chart_list = await get("/list-charts");
+            let html = chart_list.map((chart) => {
+                if (chart === "templates") return;
+                return `<div>
+                <a href="#" onclick="load_chart('${chart}')">${chart}</a>
+            <div>`});
+
+            $("#project_list").html(html.join(''));
+        }
+        async function save_chart(title, tasks, refresh = false) {
+            fseq.push("save_chart");
+
+            const form = { title, tasks };
+            const response = await post("/save-chart", form);
+            refresh && await refresh_chart_list();
+        }
+        async function load_chart(title) {
+            fseq.push("load_chart");
+
+            let tasks = await get(`/load-chart/${title}`); //get tasks of title
+
+            if (!gantt) start_main_gantt();
+            if (tasks.length > 0) gantt.refresh(tasks);
+            else set_main_gantt_empty();
+
+            gantt.hide_popup(); // close popup
+            $("#task-form").show(); //show task form
+            $("#template-form").show(); //hide task modal
+            $("#task-modal").hide(); //hide task modal
+            set_loaded_chart(title);
+        }
+        function set_loaded_chart(title) {
+            fseq.push("set_loaded_chart");
+
+            loaded_chart = title;
+            $("#loaded-title-heading").val(title)//header
+
+        }
+        function set_chart_view_mode(mode) {
+            fseq.push("set_chart_view_mode");
+
+            gantt.change_view_mode(mode);
+            if (gantt_sub) gantt_sub.change_view_mode(mode);
+        }
+        function update_main_task_timelines(task, start, end) {
+
+            fseq.push("update_main_task_timelines");
+
+            task.start = formatDateWithoutUTC(start);
+            task.end = formatDateWithoutUTC(end);
+            save_chart(loaded_chart, gantt.tasks);
+        }
+    </script>
+
+    <!-- Templates -->
+    <script defer>
+        function create_new_template() {
+            fseq.push("create_new_template");
+
+            if (!loaded_chart) return;//chart is not selected
+
+            const id = "tt#" + get_hms_now();
+            const name = $("#task-name").val();
+            const description = $("#task-description").val();
+            const tags = $("#task-tags").val();
+            const owners = $("#task-owners").val();
+            const start = $("#task-start").val();
+            const end = $("#task-end").val();
+            const subtasks = [];
+            const dependencies = [];
+
+            const new_template = {
+                id, name, description, tags, owners, start, end, subtasks, dependencies
+            }
+
+            save_template(new_template);
+        }
+
+        async function save_template(new_template) {
+            fseq.push("save_template");
+
+            const templates = await get(`/load-chart/templates`);
+            templates.push(new_template);
+            await save_chart("templates", templates);
+            refresh_template_list();
+        }
+
+        async function refresh_template_list() {
+            fseq.push("refresh_template_list");
+
+            let template_list = await get("/load-chart/templates");
+
+            if (!template_list) {
+                save_chart("templates", []); //initialize the templates.json
+                template_list = [];
+            }
+
+            let html = template_list.map((template) =>
+                `<button class="expandable" title="dadasd" onclick="load_template(this)" data-json='${JSON.stringify(template)}'>
+                    ${template.name} (template)
+                    <div class="content">
+                    <small>Name: ${template.name}</small>
+                    <small>Start: ${template.start}</small>
+                    <small>End: ${template.end}</small>
+                    </div>
+                </button>`);
+            $("#template_list").html(html.join(''));
+        }
+
+        function load_template(tbtn) {
+            const template = JSON.parse(tbtn.getAttribute("data-json"));
+
+            Object.keys(template).map((property) => {
+                $(`#task-${property}`).val(template[property]);
+            });
+
+
+        }
+    </script>
+
+
+
+
+
+
+
+    <script>
+        function open_task(taskID) {
+            main_task_id = taskID;
+
+            let {name, description, tags, owners, start, end} = gantt.get_task(taskID);
+
+            $("#open-name").val(name);
+            $("#open-description").val(description);
+            $("#open-tags").val(tags);
+            $("#open-owners").val(owners);
+            $("#open-start").val(start);
+            $("#open-end").val(end);
+
+            gantt.hide_popup();
+            $("#task-modal").show();
+            load_subtask(taskID);
+        }
+
+        function close_task() {
+            main_task_id = null;
+
+            $("#open-name").val("");
+            $("#open-description").val("");
+            $("#open-tags").val("");
+            $("#open-owners").val("");
+            $("#open-start").val("");
+            $("#open-end").val("");
+
+            $("#task-modal").hide();
+            gantt_sub.hide_popup();
+        }
+
+        function load_subtask(taskID) {
+            main_task_id = taskID;
+
+            let main_task = gantt.get_task(taskID);
+            let subtasks = main_task.subtasks;
+
+            if (!gantt_sub) start_subtask();
+            if (subtasks.length > 0) gantt_sub.refresh(subtasks);
+            else set_subtask_empty();
+            set_loaded_subtask(main_task.name);
+            console.log(`LOADED subtasks for: ${main_task.name}`);
+        }
+
+        const gantt_sub_custom_popup = (task) => {
+            return `
+                    <div class="title">
+                        <button onclick="duplicate_subtask('${task.id}')" >Duplicate</button><br>
+                        <button onclick="add_dependent_subtask('${task.id}')">New Dependent</button><br>
+                        <button onclick="delete_subtask('${task.id}')">Delete</button><br>
+                        
+                    </div>
+                    <div class="subtitle"> This is a title</div>
+            `
+        }
+
+        const gantt_sub_options = {
+            view_mode: 'Day',
+            date_format: 'YYYY-MM-DD',
+            custom_popup_html: (task) => gantt_sub_custom_popup(task),
+            on_date_change: (task, start, end) => update_subtasks_timeline(task, start, end),
+            bar_height: 30,
+            padding: 18,
+            // header_height: 50,
+            // column_width: 38,
+            // step: 24,
+            // bar_height: 20,
+            // bar_corner_radius: 3,
+            // arrow_curve: 5,
+            // padding: 18,
+            // view_mode: "Day",
+            // date_format: "YYYY-MM-DD",
+            // popup_trigger: "click",
+            // language: "en"
+        }
+        function start_subtask() {
+            fseq.push("start_subtask");
+
+            const temp_task = [{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' }];
+            gantt_sub = new Gantt("#gantt-sub", temp_task, gantt_sub_options);
+            document.querySelector("#gantt-sub").querySelector(".bar").remove();
+            gantt_sub.tasks = [];
+        }
+        function set_subtask_empty() {
+            fseq.push("set_subtask_empty");
+
+            const temp_task = [{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' },{ start: '2024-09-08', end: '2024-09-14' }];
+            gantt_sub.refresh(temp_task); //if empty would remain empty
+            document.querySelector("#gantt-sub").querySelector(".bar").remove();
+            gantt_sub.tasks = [];
+        }
+
+        function set_subtask_view_mode(mode) {
+            fseq.push("set_subtask_view_mode");
+
+            gantt_sub.change_view_mode(mode);
+        }
+        function set_loaded_subtask(title) {
+            fseq.push("set_loaded_subtask");
+
+            $("#loaded-subtask-title-heading").val("Main Task: " + title)//header
+
+        }
+
+
+        async function create_new_subtask(dependsToID = "") {
+            fseq.push("create_new_subtask");
+
+            if (!main_task_id) return;//chart is not selected
+
+            // const name = $("#task-name").val() || get_hms_now();
+            const sub_name = get_hms_now();
+
+            const sub_start = dependsToID ? get_date_formatted(gantt_sub.get_task(dependsToID).end, 1) : $("#task-start").val() || get_date_formatted();
+            const sub_end = dependsToID ? get_date_formatted(gantt_sub.get_task(dependsToID).end, 2) : $("#task-end").val() || get_date_formatted(undefined, 2);
+            const sub_dependencies = [];
+            dependsToID && sub_dependencies.push(dependsToID);
+
+            const subtask = {
+                name: sub_name,
+                start: sub_start,
+                end: sub_end,
+                loaded_chart,
+                dependencies: sub_dependencies,
+            }
+
+            const subtasks = [...gantt_sub.tasks, subtask]; //existing tasks + new task
+            gantt_sub.refresh(subtasks);//re render
+            gantt.get_task(main_task_id).subtasks = subtasks;
+            gantt.refresh(gantt.tasks)
+            save_chart(loaded_chart, gantt.tasks);
+        }
+
+
+        function delete_subtask(subtaskID) {
+            fseq.push("delete_subtask");
+
+            let subtasks = []
+            if (gantt_sub.tasks.length < 2) {
+                set_subtask_empty();
+                // document.querySelector("#gantt-sub").querySelector(".bar").remove();//remove last task visually
+                gantt_sub.tasks = subtasks; //set manually
+            } else {
+                subtasks = gantt_sub.tasks.filter((st) => st.id !== subtaskID);
+                gantt_sub.refresh(subtasks); //set automatically
+            }
+
+            gantt.get_task(main_task_id).subtasks = subtasks;
+            gantt.refresh(gantt.tasks)
+            save_chart(loaded_chart, gantt.tasks);
+            gantt_sub.hide_popup();
+        }
+
+        function duplicate_subtask(subtaskID) {
+            fseq.push("duplicate_subtask");
+
+            let subtask = { ...gantt_sub.get_task(subtaskID) };//get initiating task
+
+            delete subtask._index; //remove index !important
+            delete subtask.id; //remove id to generate new one
+
+            subtask.name += "-copy"
+            const subtasks = [...gantt_sub.tasks, subtask]; //existing tasks + new task
+            gantt_sub.refresh(subtasks);//re render
+
+            gantt.get_task(main_task_id).subtasks = subtasks;
+            gantt.refresh(gantt.tasks)
+            save_chart(loaded_chart, gantt.tasks);
+        }
+
+        function add_dependent_subtask(taskID) {
+            fseq.push("add_dependent_subtask");
+
+            create_new_subtask(taskID)
+        }
+
+        function update_subtasks_timeline(task, start, end) {
+            console.log(task, start, end);
+
+            fseq.push("update_subtasks_timeline");
+
+            task.start = formatDateWithoutUTC(start);
+            task.end = formatDateWithoutUTC(end);
+
+            gantt.get_task(main_task_id).subtasks = gantt_sub.tasks;
+            gantt.refresh(gantt.tasks)
+            save_chart(loaded_chart, gantt.tasks);
+        }
+
+
+        document.querySelector("#task-modal").addEventListener("input", function (e) {
+            update_opened_task();
+            console.log("Changed");
+        })
+    </script>
+
+
+
+
+
+
+
+
+
+    <!-- Others -->
+    <script defer>
+        document.addEventListener("click", function () {
+            const popup = $("#gantt .popup-wrapper");
+            if (popup.css('opacity') == 1) {
+                popup.css('display', 'block');
+            } else if (popup.css('opacity') == 0) {
+                popup.css('display', 'none');
+            }
+
+            const popup_sub = $("#gantt-sub .popup-wrapper");
+            if (popup_sub.css('opacity') == 1) {
+                popup_sub.css('display', 'block');
+            } else if (popup_sub.css('opacity') == 0) {
+                popup_sub.css('display', 'none');
+            }
+        })
+        function toggle_side_drawer() {
+            const drawer = document.getElementById('drawer');
+            drawer.classList.toggle('open');
+        }      
+    </script>
+
+    <!-- ON LOAD -->
+    <script>
+        let gantt, gantt_sub, main_task_id, loaded_chart, api_ip;
+        let debounceTimer;
+        let fseq = [];
+        $(document).ready(() => {
+            gantt = null;
+            gantt_sub = null;
+            main_task_id = null;
+            loaded_chart = null;
+            api_ip = "http://152.42.155.235:5030";
+            // api_ip = "http://localhost:5030";
+
+            refresh_chart_list();
+            refresh_template_list();
+
+            load_chart("Test 2");
+            // setTimeout(() => {
+            //     main_task_id = gantt.tasks[0].id;
+            //     open_task(gantt.tasks[0].id);
+            // }, 500);
+        });
+    </script>
+</body>
+
+</html>

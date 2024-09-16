@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+</head>
+<body>
+    <div id="gantt"></div>
+</body>
+
+<script>
+    // const options = {
+    //     on_date_change: (task, start, end) => {
+    //         console.log(task, start, end);
+    //     }
+    // }
+    let gantt;
+    let adjusted_tasks;
+    document.addEventListener("DOMContentLoaded", async () => {
+        const params = new URLSearchParams(window.location.search);
+        const employee_id = params.get('employee_id'); 
+        const token = params.get('token');
+
+        let response = await fetch("http://137.184.148.164:5022/tasks");
+        let all_tasks = await response.json();
+        let employee_tasks = all_tasks.filter((task) => task.tasks_assignments.includes(employee_id));
+        
+        //frappe-gantt do not support empty tasks list, it throws an error if given an empty task array.
+        //so this creates a single-task gantt-chart and removes the task through DOM.
+        if (!employee_tasks.length) {
+            employee_tasks = [{start: new Date(), end: new Date()}]    
+            gantt = new Gantt("#gantt", employee_tasks, options);
+            document.querySelector(".bar").remove();
+        } else {
+            adjusted_tasks = employee_tasks.map((task) => {
+                return {
+                    ...task,
+                    name: task.id_general,
+                    start: new Date(task.task_start_date * 1000),
+                    end: new Date(task.task_end_date * 1000),
+                    dependencies: task.task_parents,
+                    id: task.id_specific
+                }
+            })
+
+            gantt = new Gantt("#gantt", adjusted_tasks, options);
+        }
+    })
+</script>
+</html>
